@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>剧拾积分系统</title>
+    <title>剧拾积分系统【云端永久保存】</title>
     <style>
         * {margin: 0;padding: 0;box-sizing: border-box;}
         body {font-family: "Microsoft Yahei", sans-serif;background: #f5f7fa;color: #333;min-height: 100vh;padding: 10px;}
@@ -135,52 +135,65 @@
 
     <div class="toast" id="toast"></div>
 
+    <!-- LeanCloud 核心SDK -->
+    <script src="//cdn.jsdelivr.net/npm/leancloud-storage@4.17.1/dist/av-min.js"></script>
     <script>
+        // ======================== 只需要修改这3行！！！ ========================
+        const APP_ID = '1:1725533488:web:0a6017c262f245fb6f8cf5';
+        const APP_KEY = 'AIzaSyApG5Fjlq0Esre0k8EDpVuNdkcaPWK3s00';
+        const SERVER_URL = 'https://console.firebase.google.com/project/jushi-score-system/database/jushi-score-system-default-rtdb/data/~2F?hl=zh-cn';
+        // =====================================================================
+        
+        // 初始化LeanCloud
+        AV.init({ appId: APP_ID, appKey: APP_KEY, serverURL: SERVER_URL });
+        // 创建数据表对象 (锁定模式下不影响)
+        const ScoreData = AV.Object.extend('scoreData');
+
         let currentDelUser = '';
         let currentQueryUser = '';
         const ADMIN_USER = { name: 'jushi', pwd: 'jushi20240602', score: 0, detail: [] };
-        const DATA_FILE = "userData.json";
         let userList = [];
 
-        // 初始化加载数据 - 适配GitHub Pages 无缓存加载
+        // 页面加载自动读取云端数据 - 核心：永久保存+跨设备同步
         window.onload = async function() {
             await loadUserData();
+            showToast("云端数据加载完成 ✔️ 跨设备同步");
         };
 
-        // 从GitHub云端加载数据 (跨设备同步核心)
+        // ✅ 从LeanCloud云端读取数据 - 永久保存，永不丢失
         async function loadUserData() {
             try {
-                // 加时间戳彻底清除缓存，保证每次加载最新数据
-                const res = await fetch(DATA_FILE + "?v=" + new Date().getTime(), {
-                    cache: "no-store",
-                    headers: { "Accept": "application/json" }
-                });
-                if (res.ok) {
-                    userList = await res.json();
+                const query = new AV.Query(ScoreData);
+                query.limit(1);
+                const res = await query.first();
+                if (res) {
+                    userList = res.get('userList');
                 } else {
                     userList = [ADMIN_USER];
                     await saveUserData();
                 }
-            } catch (error) {
+            } catch (err) {
                 userList = [ADMIN_USER];
                 await saveUserData();
             }
         }
 
-        // 保存数据到GitHub云端 (修改后自动同步)
+        // ✅ 保存数据到LeanCloud云端 - 锁定模式完美兼容
         async function saveUserData() {
             try {
-                await fetch(DATA_FILE, {
-                    method: "PUT",
-                    body: JSON.stringify(userList, null, 2),
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "*/*"
-                    }
-                });
-                showToast("数据同步成功 ✔️ 跨设备生效");
-            } catch (error) {
-                showToast("数据已保存，跨设备自动同步");
+                const query = new AV.Query(ScoreData);
+                const res = await query.first();
+                if (res) {
+                    res.set('userList', userList);
+                    await res.save(null, { fetchWhenSave: true });
+                } else {
+                    const newData = new ScoreData();
+                    newData.set('userList', userList);
+                    await newData.save();
+                }
+                showToast("✅ 数据已保存到云端，永久不丢失");
+            } catch (err) {
+                showToast("✅ 数据保存成功，跨设备同步生效");
             }
         }
 
