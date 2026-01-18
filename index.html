@@ -182,7 +182,7 @@
 
         let currentDelUser = '';
         let currentQueryUser = '';
-        const ADMIN_USER = { name: 'jushi', pwd: 'jushi20240602', score: 0, detail: [] };
+        const ADMIN_USER = { name: 'jushi', pwd: 'jushi', score: 0, detail: [] };
         let userList = [];
 
         // 页面加载自动读取云端数据
@@ -205,11 +205,11 @@ async function loadUserData() {
       }));
     } else {
       // 重点：管理员用户的detail初始化为[]
-      userList = [{ name: 'jushi', pwd: 'jushi20240602', score: 0, detail: [] }];
+      userList = [{ name: 'jushi', pwd: 'jushi', score: 0, detail: [] }];
       await saveUserData();
     }
   } catch (err) {
-    userList = [{ name: 'jushi', pwd: 'jushi20240602', score: 0, detail: [] }];
+    userList = [{ name: 'jushi', pwd: 'jushi', score: 0, detail: [] }];
     await saveUserData();
   }
 }
@@ -232,7 +232,7 @@ async function saveUserData() {
             if (!user) { showToast('账号或密码错误！'); return; }
             
             document.getElementById('loginPage').classList.add('hidden');
-            const targetPage = (userName === 'jushi' && userPwd === 'jushi20240602') ? 'adminPage' : 'userPage';
+            const targetPage = (userName === 'jushi' && userPwd === 'jushi') ? 'adminPage' : 'userPage';
             document.getElementById(targetPage).classList.remove('hidden');
             
             if(targetPage === 'userPage') renderUserSelfInfo(user);
@@ -432,4 +432,5 @@ async function addUser() {
         }
     </script>
 </body>
+
 </html>
