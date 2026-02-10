@@ -6,7 +6,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
   import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-database.js";
 
-  // 2. 你的Firebase配置
+  // 2. Firebase配置
   const firebaseConfig = {
     apiKey: "AIzaSyApG5Fjlq0Esre0k8EDpVuNdkcaPWK3s00",
     authDomain: "jushi-score-system.firebaseapp.com",
@@ -51,7 +51,8 @@
         .func-item {margin-bottom: 15px;}
         .func-item input {width: 100%;padding: 10px 12px;border: 1px solid #e0e0e0;border-radius: 8px;font-size: 15px;margin-top: 5px;}
         .detail-box {margin-top: 12px;padding: 10px;border-radius: 8px;background: #f8f9fa;font-size: 14px;max-height: 200px;overflow-y: auto;}
-        .detail-item {padding: 6px 0;border-bottom: 1px solid #eee;}
+        .detail-item {padding: 6px 0;border-bottom: 1px solid #eee;display: flex;justify-content: space-between;align-items: center;}
+        .detail-item .del-btn {padding: 4px 8px;font-size: 12px;width: auto;background: #ff4d4f;color: #fff;border-radius: 4px;}
         .user-list {margin-top: 10px;padding: 8px;border-radius: 8px;background: #f8f9fa;max-height: 200px;overflow-y: auto;}
         .user-item {padding: 5px 0;border-bottom: 1px solid #eee;display: flex;justify-content: space-between;}
         .modal {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);display: flex;align-items: center;justify-content: center;z-index: 999;opacity: 0;visibility: hidden;transition: all 0.3s ease;}
@@ -65,6 +66,7 @@
         .hidden {display: none;}
         .share-btn {background: #4cd964;color: #fff;margin-top: 10px;}
         .share-btn:active {transform: scale(0.98);background: #3bc053;}
+        .stat-box {margin-top: 10px;padding: 10px;border-radius: 8px;background: #f8f9fa;font-size: 14px;line-height: 1.6;}
     </style>
 </head>
 <body>
@@ -82,19 +84,6 @@
     </div>
 
     <div class="container hidden" id="adminPage">
-        <div class="func-module">
-            <div class="func-title">▍新增用户</div>
-            <div class="func-item">
-                <label>新增账号昵称</label>
-                <input type="text" id="addUserName" placeholder="请输入用户账号昵称">
-            </div>
-            <div class="func-item">
-                <label>新增用户密码</label>
-                <input type="password" id="addUserPwd" placeholder="请输入用户密码">
-            </div>
-            <button class="btn-primary" onclick="addUser()">创建用户</button>
-        </div>
-
         <div class="func-module">
             <div class="func-title">▍管理积分</div>
             <div class="func-item">
@@ -122,10 +111,28 @@
             </div>
         </div>
 
+        <!-- 新增用户模块移至删除用户上方 -->
         <div class="func-module">
-            <div class="func-title">▍查询所有用户</div>
-            <button class="btn-primary" onclick="toggleAllUserList()">点击展开/收起用户列表</button>
-            <div class="user-list hidden" id="allUserList"></div>
+            <div class="func-title">▍新增用户</div>
+            <div class="func-item">
+                <label>新增账号昵称</label>
+                <input type="text" id="addUserName" placeholder="请输入用户账号昵称">
+            </div>
+            <button class="btn-primary" onclick="addUser()">创建用户</button>
+            <div style="margin-top:8px;color:#666;font-size:13px;">注：用户密码自动设为与昵称相同</div>
+        </div>
+
+        <!-- 用户统计+积分排行模块（替换原查询所有用户） -->
+        <div class="func-module">
+            <div class="func-title">▍用户统计 & 积分排行</div>
+            <!-- 用户统计（直接展示） -->
+            <div class="stat-box" id="userStatBox">
+                <div id="userCountInfo">总用户数（不含管理员）：0</div>
+                <div id="zeroScoreUserInfo">第一位0积分用户：无</div>
+            </div>
+            <!-- 积分排行 -->
+            <div style="margin-top:15px;"><b>积分排行（从高到低）</b></div>
+            <div class="user-list" id="scoreRankList"></div>
         </div>
 
         <div class="func-module">
@@ -148,6 +155,18 @@
         </div>
     </div>
 
+    <!-- 删除备注确认弹窗 -->
+    <div class="modal" id="delDetailModal">
+        <div class="modal-content">
+            <h3 id="delDetailTitle">确认删除？</h3>
+            <p id="delDetailText">你确定要删除这条积分备注吗？删除后无法恢复！</p>
+            <div class="modal-btn-group">
+                <button class="btn-default" onclick="hideDelDetailModal()">取消</button>
+                <button class="btn-danger" onclick="confirmDelDetail()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="confirmModal">
         <div class="modal-content">
             <h3 id="modalTitle">确认删除？</h3>
@@ -161,12 +180,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- Firebase 核心依赖库 -->
-	<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
     <script>
-        // ======================== 你的专属 Firebase 配置信息【一字未改】 ========================
         const firebaseConfig = {
             apiKey: "AIzaSyApG5Fjlq0Esre0k8EDpVuNdkcaPWK3s00",
             authDomain: "jushi-score-system.firebaseapp.com",
@@ -176,69 +190,97 @@
             messagingSenderId: "1725533488",
             appId: "1:1725533488:web:0a6017c262f245fb6f8cf5"
         };
-        // 初始化Firebase 实时数据库
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database().ref("scoreData");
-
+        
         let currentDelUser = '';
         let currentQueryUser = '';
-        // 1. 移除硬编码的管理员账号密码
-        // const ADMIN_USER = { name: 'jushi', pwd: 'jushi', score: 0, detail: [] }; 
-        let userList = [];
-        // 新增：定义管理员标识（仅用于判断用户名）
         const ADMIN_USER_NAME = 'jushi';
+        let userList = [];
+        // 新增：记录当前要删除的备注索引
+        let currentDelDetailIndex = -1;
 
-        // 页面加载自动读取云端数据
+        // 页面加载自动读取云端数据 + 初始化统计/排行
         window.onload = async function() {
             await loadUserData();
+            updateUserStatAndRank(); // 初始化用户统计和积分排行
             showToast("✅ 云端数据加载完成 ");
         };
 
-        // ✅ 从Firebase读取数据 - 核心方法
+        // 从Firebase读取数据
         async function loadUserData() {
           try {
             const snapshot = await get(dbRef);
             if (snapshot.exists()) {
               userList = snapshot.val().userList;
-              // 补充：遍历用户列表，确保所有用户的detail都是数组
               userList = userList.map(user => ({
                 ...user,
-                detail: user.detail || [] // 若detail不存在，设为[]
+                detail: user.detail || []
               }));
             } else {
-              // 2. 移除硬编码的管理员初始化，改为空数组（Firebase中已创建jushi账户）
-              userList = []; 
+              userList = [];
               await saveUserData();
             }
           } catch (err) {
-            // 3. 异常时也初始化为空数组，不再硬编码管理员
-            userList = []; 
+            userList = [];
             await saveUserData();
+            console.error('加载数据失败：', err);
+            showToast('❌ 加载数据失败，已初始化空数据');
           }
         }
 
-        // 替换原来的saveUserData
+        // 保存数据到Firebase
         async function saveUserData() {
           try {
             await set(dbRef, { userList: userList });
+            // 保存后更新统计和排行
+            updateUserStatAndRank();
             showToast("✅ 数据已保存到云端");
           } catch (err) {
-            showToast("✅ 数据保存成功");
+            console.error('保存数据失败：', err);
+            showToast('❌ 数据保存失败，请重试');
           }
         }
 
-        // 用户登录 - 核心修改：动态判断管理员权限
+        // 新增：更新用户统计和积分排行
+        function updateUserStatAndRank() {
+            // 过滤掉管理员，只统计普通用户
+            const normalUsers = userList.filter(user => user.name !== ADMIN_USER_NAME);
+            
+            // 1. 更新用户统计
+            const userCount = normalUsers.length;
+            document.getElementById('userCountInfo').innerText = `总用户数（不含管理员）：${userCount}`;
+            
+            // 查找第一位0积分用户
+            const zeroScoreUser = normalUsers.find(user => user.score === 0);
+            const zeroScoreText = zeroScoreUser ? zeroScoreUser.name : '无';
+            document.getElementById('zeroScoreUserInfo').innerText = `第一位0积分用户：${zeroScoreText}`;
+            
+            // 2. 更新积分排行（从高到低）
+            const sortedUsers = [...normalUsers].sort((a, b) => b.score - a.score);
+            const rankList = document.getElementById('scoreRankList');
+            
+            if (sortedUsers.length === 0) {
+                rankList.innerHTML = '<div style="text-align:center;color:#999;">暂无普通用户</div>';
+                return;
+            }
+            
+            rankList.innerHTML = sortedUsers.map((user, index) => `
+                <div class="user-item">
+                    <span>${index + 1}. ${user.name}</span>
+                    <span>${user.score} 分</span>
+                </div>
+            `).join('');
+        }
+
+        // 用户登录
         function login() {
             const userName = document.getElementById('loginUser').value.trim();
             const userPwd = document.getElementById('loginPwd').value.trim();
             if (!userName || !userPwd) { showToast('账号和密码不能为空！'); return; }
             
-            // 从Firebase读取的用户列表中查找用户
             const user = userList.find(item => item.name === userName && item.pwd === userPwd);
             if (!user) { showToast('账号或密码错误！'); return; }
             
             document.getElementById('loginPage').classList.add('hidden');
-            // 2. 修改权限判断逻辑：仅判断用户名是否为jushi（从Firebase读取）
             const targetPage = (userName === ADMIN_USER_NAME) ? 'adminPage' : 'userPage';
             document.getElementById(targetPage).classList.remove('hidden');
             
@@ -246,18 +288,18 @@
             showToast('登录成功！');
         }
 
+        // 优化创建用户：密码自动与昵称一致
         async function addUser() {
           const userName = document.getElementById('addUserName').value.trim();
-          const userPwd = document.getElementById('addUserPwd').value.trim();
-          if (!userName || !userPwd) { showToast('账号和密码不能为空！'); return; }
+          if (!userName) { showToast('请输入用户账号昵称！'); return; }
           if (userList.find(item => item.name === userName)) { showToast('该账号已存在！'); return; }
           
-          // 重点：确保detail是[]而不是undefined
+          // 密码自动填充为与昵称相同
+          const userPwd = userName;
           userList.push({ name: userName, pwd: userPwd, score: 0, detail: [] });
           await saveUserData();
           document.getElementById('addUserName').value = '';
-          document.getElementById('addUserPwd').value = '';
-          showToast('用户创建成功！');
+          showToast(`用户创建成功！密码：${userPwd}`);
         }
 
         // 管理员-查询用户积分
@@ -275,20 +317,51 @@
             renderScoreDetail(user.detail);
         }
 
-        // 渲染积分明细
+        // 优化渲染积分明细：添加删除备注按钮
         function renderScoreDetail(detail) {
             const listBox = document.getElementById('scoreDetailList');
             if (detail.length === 0) {
                 listBox.innerHTML = '<div style="text-align:center;color:#999;">暂无积分明细</div>';
                 return;
             }
-            listBox.innerHTML = detail.map(item => `
+            // 每个明细项添加删除按钮
+            listBox.innerHTML = detail.map((item, index) => `
                 <div class="detail-item">
-                    时间：${item.time} <br>
-                    备注：${item.desc} <br>
-                    积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    <div>
+                        时间：${item.time} <br>
+                        备注：${item.desc} <br>
+                        积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    </div>
+                    <button class="del-btn" onclick="showDelDetailConfirm(${index})">删除</button>
                 </div>
             `).join('');
+        }
+
+        // 新增：显示删除备注确认弹窗
+        function showDelDetailConfirm(index) {
+            currentDelDetailIndex = index;
+            document.getElementById('delDetailModal').classList.add('show');
+        }
+
+        // 新增：隐藏删除备注弹窗
+        function hideDelDetailModal() {
+            document.getElementById('delDetailModal').classList.remove('show');
+            currentDelDetailIndex = -1;
+        }
+
+        // 新增：确认删除备注
+        async function confirmDelDetail() {
+            if (currentDelDetailIndex === -1 || !currentQueryUser) return;
+            
+            const userIndex = userList.findIndex(item => item.name === currentQueryUser);
+            // 删除对应索引的明细
+            userList[userIndex].detail.splice(currentDelDetailIndex, 1);
+            
+            await saveUserData();
+            hideDelDetailModal();
+            // 重新查询用户信息，刷新明细
+            queryUserScore();
+            showToast('备注删除成功！');
         }
 
         // 添加积分
@@ -347,37 +420,14 @@
             navigator.clipboard.writeText(copyText).then(() => {
                 showToast('信息复制成功！');
             }).catch(() => {
-                showToast('复制成功，请手动复制！');
+                showToast('复制失败，请手动复制！'); // 修正错误提示
             });
-        }
-
-        // 展开/收起所有用户
-        function toggleAllUserList() {
-            const listBox = document.getElementById('allUserList');
-            if (listBox.classList.contains('hidden')) {
-                if (userList.length === 0) {
-                    listBox.innerHTML = '<div style="text-align:center;color:#999;">暂无用户</div>';
-                } else {
-                    listBox.innerHTML = userList.map(item => `
-                        <div class="user-item">
-                            <span>账号：${item.name}</span>
-                            <span>积分：${item.score}</span>
-                        </div>
-                    `).join('');
-                }
-                listBox.classList.remove('hidden');
-                showToast('已展开所有用户！');
-            } else {
-                listBox.classList.add('hidden');
-                showToast('已收起用户列表！');
-            }
         }
 
         // 删除用户-二次确认
         function showDelConfirm() {
             const userName = document.getElementById('delUserName').value.trim();
             if (!userName) { showToast('请输入要删除的用户昵称！'); return; }
-            // 3. 保留禁止删除管理员的逻辑（仅判断用户名）
             if (userName === ADMIN_USER_NAME) { showToast('禁止删除管理员账号！'); return; }
             if (!userList.find(item => item.name === userName)) { showToast('该用户不存在！'); return; }
             
@@ -404,9 +454,11 @@
             }
             detailBox.innerHTML = user.detail.map(item => `
                 <div class="detail-item">
-                    时间：${item.time} <br>
-                    备注：${item.desc} <br>
-                    积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    <div>
+                        时间：${item.time} <br>
+                        备注：${item.desc} <br>
+                        积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    </div>
                 </div>
             `).join('');
         }
@@ -440,5 +492,4 @@
         }
     </script>
 </body>
-
 </html>
