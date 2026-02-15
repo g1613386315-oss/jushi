@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js";
+  import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyApG5Fjlq0Esre0k8EDpVuNdkcaPWK3s00",
+    authDomain: "jushi-score-system.firebaseapp.com",
+    databaseURL: "https://jushi-score-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "jushi-score-system",
+    storageBucket: "jushi-score-system.firebasestorage.app",
+    messagingSenderId: "1725533488",
+    appId: "1:1725533488:web:0a6017c262f245fb6f8cf5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db, "scoreData");
+
+  window.dbRef = dbRef;
+  window.get = get;
+  window.set = set;
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>【剧拾积分系统】</title>
+    <style>
+        * {margin: 0;padding: 0;box-sizing: border-box;}
+        body {font-family: "Microsoft Yahei", sans-serif;background: #f5f7fa;color: #333;min-height: 100vh;padding: 10px;}
+        .title {text-align: center;font-size: 22px;font-weight: bold;color: #2d5aff;margin: 15px 0 25px;padding: 10px;border-bottom: 2px solid #2d5aff;}
+        .container {max-width: 420px;margin: 0 auto;background: #fff;border-radius: 16px;padding: 20px;box-shadow: 0 4px 12px rgba(0,0,0,0.08);}
+        .login-box .input-item {margin-bottom: 18px;}
+        .login-box label {display: block;font-size: 15px;margin-bottom: 6px;color: #555;}
+        .login-box input {width: 100%;padding: 12px 15px;border: 1px solid #e0e0e0;border-radius: 10px;font-size: 16px;outline: none;transition: all 0.3s;}
+        .login-box input:focus {border-color: #2d5aff;box-shadow: 0 0 0 3px rgba(45,90,255,0.1);}
+        button {width: 100%;padding: 12px;border: none;border-radius: 10px;font-size: 16px;font-weight: bold;cursor: pointer;transition: all 0.2s ease;}
+        .btn-primary {background: #2d5aff;color: #fff;}
+        .btn-primary:active {transform: scale(0.98);background: #1f49e0;}
+        .btn-danger {background: #ff4d4f;color: #fff;margin-top: 10px;}
+        .btn-danger:active {transform: scale(0.98);background: #e03537;}
+        .btn-default {background: #f0f2f5;color: #333;margin-top: 8px;}
+        .btn-default:active {transform: scale(0.98);background: #e5e7eb;}
+        .func-module {margin-top: 20px;padding: 18px;border-radius: 12px;background: #fafbff;border: 1px solid #f0f3ff;}
+        .func-title {font-size: 17px;font-weight: bold;color: #2d5aff;margin-bottom: 15px;padding-bottom: 8px;border-bottom: 1px solid #e8eeff;}
+        .func-item {margin-bottom: 15px;}
+        .func-item input {width: 100%;padding: 10px 12px;border: 1px solid #e0e0e0;border-radius: 8px;font-size: 15px;margin-top: 5px;}
+        .detail-box {margin-top: 12px;padding: 10px;border-radius: 8px;background: #f8f9fa;font-size: 14px;max-height: 200px;overflow-y: auto;}
+        .detail-item {padding: 6px 0;border-bottom: 1px solid #eee;display: flex;justify-content: space-between;align-items: center;}
+        .detail-item .del-btn {padding: 4px 8px;font-size: 12px;width: auto;background: #ff4d4f;color: #fff;border-radius: 4px;}
+        .user-list {margin-top: 10px;padding: 8px;border-radius: 8px;background: #f8f9fa;max-height: 200px;overflow-y: auto;}
+        .user-item {padding: 5px 0;border-bottom: 1px solid #eee;display: flex;justify-content: space-between;}
+        .modal {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);display: flex;align-items: center;justify-content: center;z-index: 999;opacity: 0;visibility: hidden;transition: all 0.3s ease;}
+        .modal.show {opacity: 1;visibility: visible;}
+        .modal-content {background: #fff;padding: 20px;border-radius: 12px;width: 90%;max-width: 350px;transform: translateY(-20px);transition: all 0.3s ease;}
+        .modal.show .modal-content {transform: translateY(0);}
+        .modal-btn-group {display: flex;gap: 10px;margin-top: 20px;}
+        .modal-btn-group button {flex: 1;padding: 10px;font-size: 14px;}
+        .toast {position: fixed;bottom: 30px;left: 50%;transform: translateX(-50%);padding: 10px 20px;border-radius: 20px;background: rgba(0,0,0,0.8);color: #fff;font-size: 14px;opacity: 0;visibility: hidden;transition: all 0.3s ease;z-index: 9999;}
+        .toast.show {opacity: 1;visibility: visible;}
+        .hidden {display: none;}
+        .share-btn {background: #4cd964;color: #fff;margin-top: 10px;}
+        .share-btn:active {transform: scale(0.98);background: #3bc053;}
+        .stat-box {margin-top: 10px;padding: 10px;border-radius: 8px;background: #f8f9fa;font-size: 14px;line-height: 1.6;}
+    </style>
+</head>
+<body>
+    <div class="title">剧拾积分系统</div>
+    <div class="container login-box" id="loginPage">
+        <div class="input-item">
+            <label>账号</label>
+            <input type="text" id="loginUser" placeholder="请输入账号">
+        </div>
+        <div class="input-item">
+            <label>密码</label>
+            <input type="password" id="loginPwd" placeholder="请输入密码">
+        </div>
+        <button class="btn-primary" onclick="login()">登录</button>
+    </div>
+
+    <div class="container hidden" id="adminPage">
+        <!-- 管理积分模块 -->
+        <div class="func-module">
+            <div class="func-title">▍管理积分</div>
+            <div class="func-item">
+                <label>用户账号昵称</label>
+                <input type="text" id="scoreUserName" placeholder="请输入查询的用户昵称">
+            </div>
+            <button class="btn-primary" onclick="queryUserScore()">确认查询</button>
+
+            <div class="detail-box hidden" id="scoreInfoBox">
+                <div id="userScoreBase"></div>
+                <div style="margin-top:10px;"><b>积分增减明细</b></div>
+                <div id="scoreDetailList"></div>
+            </div>
+
+            <div class="func-item hidden" id="scoreOperBox">
+                <label>添加积分</label>
+                <input type="number" id="addScoreNum" placeholder="输入添加数量" min="1">
+                <input type="text" id="addScoreDesc" placeholder="输入添加备注（必填）">
+                <button class="btn-primary" onclick="addScore()">确认添加</button>
+
+                <label style="margin-top:10px;">扣除积分</label>
+                <input type="number" id="minusScoreNum" placeholder="输入扣除数量" min="1">
+                <input type="text" id="minusScoreDesc" placeholder="输入扣除备注（必填）">
+                <button class="btn-danger" onclick="minusScore()">确认扣除</button>
+                
+                <button class="share-btn" onclick="copyUserInfo()">🔗 分享当前用户信息</button>
+            </div>
+        </div>
+
+        <!-- 批量添加积分 → 独立新模块！！！ -->
+        <div class="func-module">
+            <div class="func-title">▍批量添加积分</div>
+            <div class="func-item">
+                <label>用户列表（支持中英文逗号分隔）</label>
+                <input type="text" id="batchUserNames" placeholder="例如：张三,李四，王五">
+            </div>
+            <div class="func-item">
+                <label>添加积分数量</label>
+                <input type="number" id="batchAddScoreNum" placeholder="输入添加积分" min="1">
+            </div>
+            <div class="func-item">
+                <label>统一备注（必填）</label>
+                <input type="text" id="batchAddScoreDesc" placeholder="输入备注">
+            </div>
+            <button class="btn-primary" onclick="batchAddScore()">批量添加积分</button>
+        </div>
+
+        <!-- 用户统计 & 积分排行 -->
+        <div class="func-module">
+            <div class="func-title">▍用户统计 & 积分排行</div>
+            <div class="stat-box" id="userStatBox">
+                <div id="userCountInfo">总用户数（不含管理员）：0</div>
+                <div id="zeroScoreUserInfo">目前最新可使用的空用户：无</div>
+            </div>
+            <button class="btn-primary" style="margin-top:15px;" onclick="toggleScoreRank()">点击展开/收起积分排行</button>
+            <div class="user-list hidden" id="scoreRankList"></div>
+        </div>
+
+        <!-- 新增用户 -->
+        <div class="func-module">
+            <div class="func-title">▍新增用户</div>
+            <div class="func-item">
+                <label>新增账号昵称</label>
+                <input type="text" id="addUserName" placeholder="请输入用户账号昵称">
+            </div>
+            <button class="btn-primary" onclick="addUser()">创建用户</button>
+            <div style="margin-top:8px;color:#666;font-size:13px;">注：用户密码自动设为与昵称相同</div>
+        </div>
+
+        <!-- 删除用户 -->
+        <div class="func-module">
+            <div class="func-title">▍删除用户</div>
+            <div class="func-item">
+                <label>用户账号昵称</label>
+                <input type="text" id="delUserName" placeholder="请输入要删除的用户昵称">
+            </div>
+            <button class="btn-danger" onclick="showDelConfirm()">删除用户</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="userPage">
+        <div class="func-module">
+            <div class="func-title">▍我的积分信息</div>
+            <div class="detail-box" id="userSelfScore"></div>
+            <div style="margin-top:15px;"><b>积分增减明细</b></div>
+            <div class="detail-box" id="userSelfDetail"></div>
+            <button class="btn-default" onclick="logout()" style="margin-top:20px;">退出登录</button>
+        </div>
+    </div>
+
+    <div class="modal" id="delDetailModal">
+        <div class="modal-content">
+            <h3 id="delDetailTitle">确认删除？</h3>
+            <p id="delDetailText">你确定要删除这条积分备注吗？删除后无法恢复！</p>
+            <div class="modal-btn-group">
+                <button class="btn-default" onclick="hideDelDetailModal()">取消</button>
+                <button class="btn-danger" onclick="confirmDelDetail()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">确认删除？</h3>
+            <p id="modalText">你确定要删除该用户吗？删除后数据将无法恢复！</p>
+            <div class="modal-btn-group">
+                <button class="btn-default" onclick="hideModal()">取消</button>
+                <button class="btn-danger" onclick="confirmDelUser()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyApG5Fjlq0Esre0k8EDpVuNdkcaPWK3s00",
+            authDomain: "jushi-score-system.firebaseapp.com",
+            databaseURL: "https://jushi-score-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "jushi-score-system",
+            storageBucket: "jushi-score-system.firebasestorage.app",
+            messagingSenderId: "1725533488",
+            appId: "1:1725533488:web:0a6017c262f245fb6f8cf5"
+        };
+        
+        let currentDelUser = '';
+        let currentQueryUser = '';
+        const ADMIN_USER_NAME = 'jushi';
+        let userList = [];
+        let currentDelDetailIndex = -1;
+
+        window.onload = async function() {
+            await loadUserData();
+            updateUserStat();
+            showToast("✅ 云端数据加载完成");
+        };
+
+        async function loadUserData() {
+          try {
+            const snapshot = await get(dbRef);
+            if (snapshot.exists()) {
+              userList = snapshot.val().userList;
+              userList = userList.map(user => ({
+                ...user,
+                detail: user.detail || []
+              }));
+            } else {
+              userList = [];
+              await saveUserData();
+            }
+          } catch (err) {
+            userList = [];
+            await saveUserData();
+            console.error('加载数据失败：', err);
+            showToast('❌ 加载数据失败，已初始化空数据');
+          }
+        }
+
+        async function saveUserData() {
+          try {
+            await set(dbRef, { userList: userList });
+            updateUserStat();
+            showToast("✅ 数据已保存到云端");
+          } catch (err) {
+            console.error('保存数据失败：', err);
+            showToast('❌ 数据保存失败，请重试');
+          }
+        }
+
+        function updateUserStat() {
+            const normalUsers = userList.filter(user => user.name !== ADMIN_USER_NAME);
+            const userCount = normalUsers.length;
+            document.getElementById('userCountInfo').innerText = `总用户数（不含管理员）：${userCount}`;
+            const emptyNoteUser = normalUsers.find(user => user.detail.length === 0);
+            const emptyNoteText = emptyNoteUser ? emptyNoteUser.name : '无';
+            document.getElementById('zeroScoreUserInfo').innerText = `目前最新可使用的空用户：${emptyNoteText}`;
+        }
+
+        function toggleScoreRank() {
+            const rankList = document.getElementById('scoreRankList');
+            const normalUsers = userList.filter(user => user.name !== ADMIN_USER_NAME);
+            
+            if (rankList.classList.contains('hidden')) {
+                if (normalUsers.length === 0) {
+                    rankList.innerHTML = '<div style="text-align:center;color:#999;">暂无普通用户</div>';
+                } else {
+                    const sortedUsers = [...normalUsers].sort((a, b) => b.score - a.score);
+                    rankList.innerHTML = sortedUsers.map((user, index) => `
+                        <div class="user-item">
+                            <span>第${index + 1}名：${user.name}</span>
+                            <span>${user.score} 分</span>
+                        </div>
+                    `).join('');
+                }
+                rankList.classList.remove('hidden');
+                showToast('已展开积分排行！');
+            } else {
+                rankList.classList.add('hidden');
+                showToast('已收起积分排行！');
+            }
+        }
+
+        function login() {
+            const userName = document.getElementById('loginUser').value.trim();
+            const userPwd = document.getElementById('loginPwd').value.trim();
+            if (!userName || !userPwd) { showToast('账号和密码不能为空！'); return; }
+            
+            const user = userList.find(item => item.name === userName && item.pwd === userPwd);
+            if (!user) { showToast('账号或密码错误！'); return; }
+            
+            document.getElementById('loginPage').classList.add('hidden');
+            const targetPage = (userName === ADMIN_USER_NAME) ? 'adminPage' : 'userPage';
+            document.getElementById(targetPage).classList.remove('hidden');
+            
+            if(targetPage === 'userPage') renderUserSelfInfo(user);
+            showToast('登录成功！');
+        }
+
+        async function addUser() {
+          const userName = document.getElementById('addUserName').value.trim();
+          if (!userName) { showToast('请输入用户账号昵称！'); return; }
+          if (userList.find(item => item.name === userName)) { showToast('该账号已存在！'); return; }
+          
+          const userPwd = userName;
+          userList.push({ name: userName, pwd: userPwd, score: 0, detail: [] });
+          await saveUserData();
+          document.getElementById('addUserName').value = '';
+          showToast(`用户创建成功！密码：${userPwd}`);
+        }
+
+        function queryUserScore() {
+            const userName = document.getElementById('scoreUserName').value.trim();
+            if (!userName) { showToast('请输入用户账号昵称！'); return; }
+            
+            const user = userList.find(item => item.name === userName);
+            if (!user) { showToast('该用户不存在！'); return; }
+            
+            currentQueryUser = userName;
+            document.getElementById('scoreInfoBox').classList.remove('hidden');
+            document.getElementById('scoreOperBox').classList.remove('hidden');
+            document.getElementById('userScoreBase').innerHTML = `姓名：${user.name} <br> 当前积分：${user.score} 分`;
+            renderScoreDetail(user.detail);
+        }
+
+        function renderScoreDetail(detail) {
+            const listBox = document.getElementById('scoreDetailList');
+            if (detail.length === 0) {
+                listBox.innerHTML = '<div style="text-align:center;color:#999;">暂无积分明细</div>';
+                return;
+            }
+            listBox.innerHTML = detail.map((item, index) => `
+                <div class="detail-item">
+                    <div>
+                        时间：${item.time} <br>
+                        备注：${item.desc} <br>
+                        积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    </div>
+                    <button class="del-btn" onclick="showDelDetailConfirm(${index})">删除</button>
+                </div>
+            `).join('');
+        }
+
+        function showDelDetailConfirm(index) {
+            currentDelDetailIndex = index;
+            document.getElementById('delDetailModal').classList.add('show');
+        }
+
+        function hideDelDetailModal() {
+            document.getElementById('delDetailModal').classList.remove('show');
+            currentDelDetailIndex = -1;
+        }
+
+        async function confirmDelDetail() {
+            if (currentDelDetailIndex === -1 || !currentQueryUser) return;
+            
+            const userIndex = userList.findIndex(item => item.name === currentQueryUser);
+            userList[userIndex].detail.splice(currentDelDetailIndex, 1);
+            
+            await saveUserData();
+            hideDelDetailModal();
+            queryUserScore();
+            showToast('备注删除成功！');
+        }
+
+        async function addScore() {
+            const num = parseInt(document.getElementById('addScoreNum').value);
+            const desc = document.getElementById('addScoreDesc').value.trim();
+            if (!num || num < 1 || !desc) { showToast('请输入有效的积分数量和备注！'); return; }
+            await updateScore('add', num, desc);
+        }
+
+        async function minusScore() {
+            const num = parseInt(document.getElementById('minusScoreNum').value);
+            const desc = document.getElementById('minusScoreDesc').value.trim();
+            if (!num || num < 1 || !desc) { showToast('请输入有效的积分数量和备注！'); return; }
+            
+            const user = userList.find(item => item.name === currentQueryUser);
+            if (user.score < num) { showToast('积分不足，扣除失败！'); return; }
+            await updateScore('minus', num, desc);
+        }
+
+        async function updateScore(type, num, desc) {
+            const index = userList.findIndex(item => item.name === currentQueryUser);
+            const nowTime = new Date().toLocaleString('zh-CN');
+            
+            userList[index].score = type === 'add' ? userList[index].score + num : userList[index].score - num;
+            userList[index].detail.unshift({ time: nowTime, desc: desc, num: num, type: type });
+            
+            await saveUserData();
+            document.getElementById('addScoreNum').value = '';
+            document.getElementById('addScoreDesc').value = '';
+            document.getElementById('minusScoreNum').value = '';
+            document.getElementById('minusScoreDesc').value = '';
+            
+            queryUserScore();
+            showToast(type === 'add' ? '积分添加成功！' : '积分扣除成功！');
+        }
+
+        // 批量添加积分（支持中英文逗号）
+        async function batchAddScore() {
+            let userNamesStr = document.getElementById('batchUserNames').value.trim();
+            const num = parseInt(document.getElementById('batchAddScoreNum').value);
+            const desc = document.getElementById('batchAddScoreDesc').value.trim();
+
+            if (!userNamesStr) { showToast('请输入用户列表！'); return; }
+            if (!num || num < 1) { showToast('请输入有效积分！'); return; }
+            if (!desc) { showToast('请输入备注！'); return; }
+
+            // 中文逗号转英文逗号
+            userNamesStr = userNamesStr.replace(/，/g, ',');
+            const userNames = userNamesStr.split(',')
+                .map(n => n.trim())
+                .filter(n => n);
+
+            const notFound = [];
+            const now = new Date().toLocaleString('zh-CN');
+
+            userNames.forEach(name => {
+                const idx = userList.findIndex(u => u.name === name);
+                if (idx === -1) {
+                    notFound.push(name);
+                } else {
+                    userList[idx].score += num;
+                    userList[idx].detail.unshift({ time: now, desc: desc, num: num, type: 'add' });
+                }
+            });
+
+            await saveUserData();
+            document.getElementById('batchUserNames').value = '';
+            document.getElementById('batchAddScoreNum').value = '';
+            document.getElementById('batchAddScoreDesc').value = '';
+
+            if (notFound.length > 0) {
+                showToast(`✅ 批量添加完成，未找到：${notFound.join('、')}`);
+            } else {
+                showToast('✅ 批量添加积分成功！');
+            }
+        }
+
+        function copyUserInfo() {
+            const user = userList.find(item => item.name === currentQueryUser);
+            if (!user) return;
+            
+            let detailText = '';
+            user.detail.forEach(item => {
+                detailText += `${item.time} | ${item.desc} | ${item.type === 'add' ? '+'+item.num : '-'+item.num}\n`;
+            });
+            const copyText = `【剧拾积分系统】
+—————————
+姓名：${user.name}
+当前积分：${user.score}
+积分明细：${detailText || '暂无明细'}
+—————————`;
+
+            navigator.clipboard.writeText(copyText).then(() => {
+                showToast('信息复制成功！');
+            }).catch(() => {
+                showToast('复制失败，请手动复制！');
+            });
+        }
+
+        function showDelConfirm() {
+            const userName = document.getElementById('delUserName').value.trim();
+            if (!userName) { showToast('请输入要删除的用户昵称！'); return; }
+            if (userName === ADMIN_USER_NAME) { showToast('禁止删除管理员账号！'); return; }
+            if (!userList.find(item => item.name === userName)) { showToast('该用户不存在！'); return; }
+            
+            currentDelUser = userName;
+            document.getElementById('confirmModal').classList.add('show');
+        }
+
+        async function confirmDelUser() {
+            userList = userList.filter(item => item.name !== currentDelUser);
+            await saveUserData();
+            document.getElementById('delUserName').value = '';
+            hideModal();
+            showToast('用户删除成功！');
+        }
+
+        function renderUserSelfInfo(user) {
+            document.getElementById('userSelfScore').innerHTML = `当前积分：${user.score} 分`;
+            const detailBox = document.getElementById('userSelfDetail');
+            if (user.detail.length === 0) {
+                detailBox.innerHTML = '<div style="text-align:center;color:#999;">暂无积分明细</div>';
+                return;
+            }
+            detailBox.innerHTML = user.detail.map(item => `
+                <div class="detail-item">
+                    <div>
+                        时间：${item.time} <br>
+                        备注：${item.desc} <br>
+                        积分：${item.type === 'add' ? '+'+item.num : '-'+item.num}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('userPage').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPwd').value = '';
+            currentQueryUser = '';
+            currentDelUser = '';
+            showToast('退出登录成功！');
+        }
+
+        function hideModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+            currentDelUser = '';
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            toast.innerText = text;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
